@@ -1,0 +1,260 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml"
+	xmlns:custom="com.ae.ui.custom.*" 
+	width="100%" height="100%"
+	creationComplete="creationCompleteHandler()"
+	remove="destroy()"
+	xmlns:components="com.ae.cryptx.components.*"
+	verticalScrollPolicy="off" horizontalScrollPolicy="off">
+	
+	<mx:Metadata>
+		[Exclude(name="fileName", kind="property")]
+		[Exclude(name="fileSize", kind="property")]
+		[Exclude(name="fileLocation", kind="property")]
+		[Exclude(name="contentContainer", kind="property")]
+		[Exclude(name="dropShadowFilter", kind="property")]
+	</mx:Metadata>
+	
+	<mx:Script>
+		<![CDATA[
+			import mx.controls.Alert;
+			import com.ae.managers.AssetManager;
+			import com.ae.utils.FileOperations;
+			import com.ae.utils.Utils;
+			import mx.controls.Image;
+			import mx.core.UIComponent;
+			import com.ae.cryptx.vo.FileInfoVo;
+			
+			//-----------------------------------------------------------------
+			//
+			//  Variables
+			//
+			//-----------------------------------------------------------------
+			
+			[Bindable]
+			private var isRapFile:Boolean = false;
+			private var fileOperations:FileOperations;
+			private var validFileCharsRegExp:RegExp = 
+				/[A-Za-z0-9~!@#$%^&()-_=+[]{};',.]+/;
+			
+			//-----------------------------------------------------------------
+			//
+			//  Properties
+			//
+			//----------------------------------------------------------------- 
+			
+			/**
+			 * fileInfo
+			 */
+			private var _fileInfo:FileInfoVo;
+			
+			public function set fileInfo(value:FileInfoVo):void
+			{
+				_fileInfo = value;
+				setValues(value);
+			}
+			
+			[Bindable]
+			public function get fileInfo():FileInfoVo
+			{
+				return _fileInfo;
+			}
+			
+			/**
+			 * isEditable
+			 */
+			private var _isEditable:Boolean;
+			
+			public function set isEditable(value:Boolean):void
+			{
+				_isEditable = value;
+			}
+			
+			public function get isEditable():Boolean
+			{
+				return _isEditable;
+			}
+			
+			/**
+			 * componentTitle
+			 */
+			private var _componentTitle:String;
+			
+			[Bindable]
+			public function set componentTitle(value:String):void
+			{
+				_componentTitle = value;
+			}
+			
+			public function get componentTitle():String
+			{
+				return _componentTitle;
+			}
+			
+			//-----------------------------------------------------------------
+			//
+			//  Methods
+			//
+			//-----------------------------------------------------------------
+			
+			private function creationCompleteHandler():void
+			{
+				iconCanvas.filters = [dropShadowFilter];
+				fileOperations = new FileOperations();
+				fileOperations.addEventListener(Event.COMPLETE, onFileSelect);
+				fileName.editableLabel.imageSource = 
+					AssetManager.getInstance().SelectedIcon;
+				setComponents();
+			}
+			
+			private function destroy():void
+			{
+				fileOperations.removeEventListener(Event.COMPLETE, onFileSelect);
+			}
+			
+			public function updateFileInfo(value:FileInfoVo):void
+			{
+				setValues(value);
+			}
+			
+			/**
+			 * This function sets the values for the components based
+			 * on the fileInfoVo passed from the parent
+			 */
+			private function setValues(value:FileInfoVo):void
+			{
+				if(value)
+				{
+					fileSize.labelValue = Utils.bytesToString(fileInfo.size);
+					
+					iconCanvas.removeAllChildren();
+					var image:Image = new Image();
+					image.width = 32;
+					image.height = 32;
+					image.setStyle("verticalCenter", 0);
+					image.setStyle("horizontalCenter", 0);
+					image.toolTip = fileInfo.fileExtension + " file";
+					if(value.icon is BitmapData)
+					{
+						var bmpData:BitmapData = BitmapData(value.icon)
+						image.addChild(new Bitmap(bmpData))
+					}
+					else if(value.icon is Class)
+					{
+						image.source = value.icon as Class;
+					}
+					iconCanvas.addChild(image);
+				}
+			}
+			
+			/**
+			 * Set the components editable or not based on the
+			 * value for isEditable
+			 */
+			private function setComponents():void
+			{
+				if(isEditable)
+				{
+					fileName.useEditableLabel = true;
+					fileName.toolTip = "Click to edit";
+					fileLocation.toolTip = "Click to change";
+					fileLocation.useHandCursor = true;
+					fileLocation.buttonMode = true;
+					fileLocation.mouseChildren = false;
+				}
+				else
+				{
+					fileName.useEditableLabel = false;
+					fileName.toolTip = "";
+					fileLocation.toolTip = "";
+					fileLocation.useHandCursor = false;
+					fileLocation.buttonMode = false;
+					fileLocation.mouseChildren = false;
+				}
+			}
+			
+			/**
+			 * Invoked when the filename has been changed on the 
+			 * file name component
+			 */
+			private function onFileNameChanged():void
+			{
+				// should check if its valid name
+				if(validFileCharsRegExp.test(fileName.labelValue) ||
+					fileName.labelValue.length == 0)
+				{
+					// Show an error message and put the old data
+					Alert.show("The file name is invalid.", "Error Message");
+					fileName.labelValue = fileInfo.name;
+				}
+				else
+				{
+					// Update the vo
+					fileInfo.name = fileName.labelValue;
+					if(fileInfo.isRapFile)
+						fileInfo.filePath = fileInfo.location + File.separator + fileInfo.nameWithExtension;
+				}
+			}
+			
+			/**
+			 * Invoked when the location has been changed.
+			 */
+			private function onChangeLocation():void
+			{
+				if(isEditable)
+				{
+					fileOperations.browseForDirectory("Select Directory");
+				}
+			}
+			
+			private function onFileSelect(event:Event):void
+			{
+				if(fileOperations.selectedFile)
+				{
+					if(fileInfo.isRapFile)
+					{
+						var lastSlashPos:int = fileInfo.filePath.lastIndexOf(File.separator);
+						var backup:String = fileInfo.filePath.substr(lastSlashPos);
+						fileInfo.filePath = fileOperations.selectedFile.nativePath + backup;
+					}
+					else
+					{
+						// just add the directory name
+						fileInfo.filePath = fileOperations.selectedFile.nativePath + File.separator;
+					}
+					fileLocation.labelValue = fileInfo.location;
+				}
+			}
+		]]>
+	</mx:Script>
+	
+	<mx:DropShadowFilter id="dropShadowFilter"/>
+	
+	<custom:GradientCanvas width="100%" height="100%" styleName="fileInfoComponentStyle"
+		verticalScrollPolicy="off" horizontalScrollPolicy="off">
+		<mx:HBox width="99%" height="99%"
+			verticalCenter="0" horizontalCenter="0"
+			verticalScrollPolicy="off" horizontalScrollPolicy="off">
+			<mx:VBox width="18%" height="100%" 
+				backgroundColor="#f2f2f2" backgroundAlpha="0.2"
+				verticalAlign="middle" horizontalAlign="center">
+				<mx:Canvas id="iconCanvas" width="100%" height="75%"/>
+				<mx:Label text="{fileInfo.fileExtension}"/>
+			</mx:VBox>
+			
+			<mx:VBox id="contentContainer" width="82%" height="100%"
+				verticalGap="0" horizontalGap="0" 
+				verticalScrollPolicy="off" horizontalScrollPolicy="off">
+				<mx:Label text="{componentTitle}"/>
+				<components:NameValueRow id="fileName" 
+					valueUpdated="{onFileNameChanged()}" 
+					labelName="Name" labelValue="{fileInfo.name}"/>
+				<components:NameValueRow id="fileLocation" click="onChangeLocation()" 
+					labelName="Location" labelValue="{fileInfo.location}"/>
+				<components:NameValueRow id="fileSize" labelName="Size"/>
+			</mx:VBox>
+			
+		</mx:HBox>
+	</custom:GradientCanvas>
+	
+</mx:Canvas>

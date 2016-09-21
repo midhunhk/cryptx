@@ -1,0 +1,229 @@
+<?xml version="1.0" encoding="utf-8"?>
+<GradientCanvas xmlns="com.ae.ui.custom.*" 
+	xmlns:mx="http://www.adobe.com/2006/mxml" 
+	width="100%" height="100%"
+	styleName="cryptxWindowStyle"
+	creationComplete="creationCompleteHandler()"
+	remove="destroy()" xmlns:views="com.ae.cryptx.views.*">
+	
+	<mx:Metadata>
+		[Exclude(name="appInfoCanvas", kind="property")]
+		[Exclude(name="outerContainer", kind="property")]
+		[Exclude(name="innerContainer", kind="property")]
+	</mx:Metadata>
+	
+	<mx:Script>
+		<![CDATA[
+			import com.ae.cryptx.vo.RapFile;
+			import com.ae.cryptx.utils.HeaderUtils;
+			import com.ae.utils.FileReadWrite;
+			import com.ae.logger.LogManager;
+			import mx.binding.utils.ChangeWatcher;
+			import com.ae.logger.LogLevel;
+			import com.ae.logger.ILogManager;
+			import com.ae.cryptx.model.ModelLocator;
+			import mx.managers.DragManager;
+			import com.ae.cryptx.utils.FileInfoUtils;
+			import com.ae.managers.AssetManager;
+			import com.ae.cryptx.vo.FileInfoVo;
+			import com.ae.utils.FileOperations;
+			
+			//-----------------------------------------------------------------
+			//
+			//  Constants
+			//
+			//-----------------------------------------------------------------
+			
+			private static const FILE_SELECTED_STATE:String = "fileSelectedState";
+			
+			private static const appInfoText:String = "CryptX is an Encryption - Decryption Utility. " + 
+					"It uses the 128-bit AES encryption algorithm to encrypt the files. " + 
+					"This software is Developed using Adobe AIR and other 3rd party libraries.";
+			
+			//-----------------------------------------------------------------
+			//
+			//  Variables
+			//
+			//-----------------------------------------------------------------
+			
+			private var fileOperations:FileOperations;
+			private var assets:AssetManager;
+			private var model:ModelLocator;
+			private var logger:ILogManager;
+			private var watcher:ChangeWatcher;
+	
+			//-----------------------------------------------------------------
+			//
+			//  Methods
+			//
+			//-----------------------------------------------------------------
+			
+			private function creationCompleteHandler():void
+			{
+				logger = LogManager.getInstance()
+				model = ModelLocator.getInstance();
+				assets = AssetManager.getInstance();				
+				fileOperations = new FileOperations();
+				fileOperations.addEventListener(Event.COMPLETE, onFileSelect);
+				this.addEventListener(NativeDragEvent.NATIVE_DRAG_ENTER, onDragIn);
+				this.addEventListener(NativeDragEvent.NATIVE_DRAG_DROP, onDrop);
+				
+				// Check if the app was invoked by double clicking a rap file
+				try
+				{
+					logger.writeLog(LogLevel.INFO, "CryptXPanel creationComplete");
+					// Addd a change watcher
+					watcher = ChangeWatcher.watch(model, "systemFile", 
+						onSystemFileChange);
+				}
+				catch(error:Error)
+				{
+					logger.writeLog(LogLevel.ERROR, error.message);
+				}
+			}
+			
+			/**
+			 * Perform cleanup operations if any.
+			 */
+			private function destroy():void
+			{
+				fileOperations.removeEventListener(Event.COMPLETE, onFileSelect);
+				fileOperations = null;
+				watcher.unwatch();
+			}
+			
+			/**
+			 * ChangeWatcher handler invoked when model.systemFile is changed
+			 */
+			private function onSystemFileChange(event:Event):void
+			{
+				if(model.systemFile != null)
+				{
+					logger.writeLog(LogLevel.DEBUG, "Use the file " +
+						model.systemFile.nativePath);
+					processFile(model.systemFile);
+				}
+			}
+			
+			/**
+			 * Invoked when a file has been dragged.
+			 */
+			private function onDragIn(event:NativeDragEvent):void
+			{
+				DragManager.acceptDragDrop(this);
+			}
+			
+			/**
+			 * Invoked when drag Drop occurs.
+			 */
+			private function onDrop(event:NativeDragEvent):void
+			{
+				var fileList:Array = event.clipboard.getData(
+					ClipboardFormats.FILE_LIST_FORMAT) as Array;
+				
+				if(fileList.length > 0)
+				{
+					processFile(fileList[0]);
+				}
+			}
+			
+			private function onBrowseClick():void
+			{
+				fileOperations.browseForOpen("Select a file to Encrypt or Decrypt");
+			}
+			
+			private function onFileSelect(event:Event):void
+			{
+				if(fileOperations.selectedFile)
+				{
+					processFile(fileOperations.selectedFile);
+				}
+			}
+			
+			/**
+			 * This function gets the data from the selected file, creates 
+			 * the 2nd FileInfoVo and changes the state to file selected state
+			 */
+			private function processFile(file:File):void
+			{
+				// Get the file info from the selected file
+				var fileInfo:FileInfoVo = 
+					FileInfoUtils.getFileInfo(file, assets.RapFileIcon_32);
+				if(fileInfo)
+				{
+					// Change the current state and reset any data
+					this.currentState = FILE_SELECTED_STATE;
+					cryptxMain.reset();
+					
+					// Create the target fileInfoVo
+					var targetFileInfo:FileInfoVo;
+					if(fileInfo.isRapFile)
+					{
+						/*
+						var readSize:uint = Math.min(128, file.size);
+						var bytes:ByteArray = FileReadWrite.readAsByteArray(file, 0, readSize);
+						var rf:RapFile = HeaderUtils.readHeader(bytes);
+						trace( HeaderUtils.getHeaderSize(bytes) );
+						*/
+						targetFileInfo = 
+							FileInfoUtils.getFileInfoFromVo(fileInfo);
+					}
+					else
+					{
+						targetFileInfo = 
+							FileInfoUtils.getFileInfoFromVo(fileInfo, assets.RapFileIcon_32);
+					}
+					// Set the values to the components
+					cryptxMain.sourceFileInfoVo = fileInfo;
+					cryptxMain.targetFileInfoVo = targetFileInfo;
+				}
+			} 
+			
+			private function mainPanelClose():void
+			{
+				this.currentState = "";
+			}
+		]]>
+	</mx:Script>
+	
+	<!--effects and filters-->
+	<mx:DropShadowFilter id="dropShadowFilter"/>
+	<mx:GlowFilter id="glowFilter" color="#e4e4e4"/>
+	
+	<!--states-->
+	<states>
+		<mx:State name="fileSelectedState">
+			<mx:RemoveChild target="{innerContainer}"/>
+			<mx:AddChild relativeTo="{outerContainer}">
+				<views:CryptxMain id="cryptxMain" closeClicked="mainPanelClose()"/>
+			</mx:AddChild>
+		</mx:State>
+	</states>
+	
+	<!--transitions-->
+	<transitions>
+		<mx:Transition fromState="*" toState="*">
+			<mx:WipeDown duration="650" target="{outerContainer}"/>
+		</mx:Transition>
+	</transitions>
+	
+	<!--layout-->
+	<mx:Canvas id="outerContainer" width="95%" height="95%" verticalCenter="0" horizontalCenter="0">
+		<mx:VBox id="innerContainer" width="100%" height="100%" verticalGap="1" horizontalGap="1">
+			<mx:Text text="About" styleName="bodyHeadingFont"/>
+			<mx:Canvas id="appInfoCanvas" styleName="appInfoCanvasStyle" width="100%"
+				mouseChildren="false" filters="{[glowFilter]}">
+				<mx:TextArea text="{appInfoText}" height="75" selectable="false"
+					styleName="appInfoFont" width="100%" editable="false"/>
+			</mx:Canvas>
+			<mx:Spacer width="100%" height="1%"/>
+			<mx:Canvas width="100%" height="100%">
+				<mx:TextArea text="To begin, Drag and drop a file here!" height="100%"
+					styleName="dragDropFileFont" width="100%" editable="false" selectable="false"/> 
+				<mx:Button label="or browse..." click="onBrowseClick()" mouseChildren="false"
+					bottom="5" right="5" useHandCursor="true" buttonMode="true"/>
+			</mx:Canvas>
+		</mx:VBox>
+	</mx:Canvas>
+	
+</GradientCanvas>

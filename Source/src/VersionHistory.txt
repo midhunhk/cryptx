@@ -1,0 +1,48 @@
+Cryptx 6.0.1 [Mar 2011]
+ -		Layout Design and Setup.
+ -		Created CryptxCore
+ -		Implemented Encryption & Decryption
+
+Cryptx 6.0.3 [Apr 2011]
+ -		Implementing a Green Thread for managing the CryptX
+ -		Created CryptxThread class that implements a GreenThread for doing 
+ 		the encryption or decryption without having a non responsive UI
+ -		Change in FileFormat for smaller and better header. (saved around 190 bytes :))
+ -		Chnage in format of encrypted data written
+ -		Processing block size increased to 1024 bytes.
+ -		Processing block size increased to 8192 bytes.
+ -		CryptxThread throws progress events which will update a progress bar in the UI
+		in real time to notify the progress.
+
+Cryptx 6.0.5 [Apr 2011]
+ -		Showing progress bar and progress % in UI with current process name
+ -		Enhanced performance, 16s from 54 s
+ -		Memory usage around 35Mb after using green threads from 700mb for 
+		non threaded version.
+		
+Cryptx 6.0.6 [Apr 2011]
+ -		Updated interface during Processing and display of messages.
+ -		Application Icons and UI Updated.
+ -		Implemented Change of filename and location of target file.
+ -		BugFix for change in filename.
+ -		Minor UI enhancements.
+
+Cryptx 6.0.7 [Apr 2011]
+ -		Explorer integration for Rap File Type.
+ -		BugFix for FileInfoVo.
+ -		ProcessTime in Log file processed properly.
+
+Cryptx 6.0.8 [Apr 2011]
+ -		BugFix for invalid Decrypted file naming.
+ -		After decryption, the decrypted file's info are updated in the UI.
+ -		Using AeLogger 0.4.9.
+ -		BugFix for UI not reflecting updated Destination Location.
+ 
+Cryptx 6.0.9 [Jul 2011]
+ -		Added Button to open location after file is encrypted or decrypted.
+ -		Minor UI updates.
+ -		Removed the status bar.
+ 
+ Cryptx 6.1 [Aug 2011]
+ -		Rewrote CryptxThread to read from source file as blocks instead of 
+ 		reading all data at once and write to target file as blocks.  

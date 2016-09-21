@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:VBox xmlns:mx="http://www.adobe.com/2006/mxml" 
+	width="100%" height="100%"
+	verticalGap="4" horizontalGap="4"
+	verticalScrollPolicy="off" horizontalScrollPolicy="off"
+	horizontalAlign="center" 
+	xmlns:views="com.ae.cryptx.views.*">
+	
+	<mx:DropShadowFilter id="dropShadowFilter"/>
+	
+	<!--app header-->
+	<views:CryptxHeader height="92" width="100%"/>
+	
+	<!--cryptx body-->
+	<views:StartPanel width="97%" filters="{[dropShadowFilter]}"/>
+	
+	<mx:Spacer width="100%" height="1%"/>
+	
+</mx:VBox>

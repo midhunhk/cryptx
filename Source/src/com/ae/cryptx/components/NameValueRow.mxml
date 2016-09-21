@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:HBox xmlns:mx="http://www.adobe.com/2006/mxml" 
+	width="100%" height="20" verticalGap="0" horizontalGap="0" 
+	xmlns:components="com.ae.cryptx.components.*">
+	
+	<mx:Metadata>
+		[Event(name="valueUpdated", type="flash.events.Event")]
+		
+		[Exclude(name="normalLabel", kind="property")]
+		[Exclude(name="editableLabel", kind="property")]
+	</mx:Metadata>
+	
+	<mx:Script>
+		<![CDATA[
+			
+		//---------------------------------------------------------------------
+		//
+		//	Properties
+		//
+		//---------------------------------------------------------------------
+		
+		private var _labelName:String;
+		private var _labelValue:String;
+		private var _useEditableLabel:Boolean;
+		
+		[Bindable]
+		public function set labelName(value:String):void
+		{
+			_labelName = value;
+		}
+		public function get labelName():String
+		{
+			return _labelName;
+		}
+		
+		[Bindable]
+		public function set labelValue(value:String):void
+		{
+			_labelValue = value;
+		}
+		public function get labelValue():String
+		{
+			return _labelValue;
+		}
+		
+		public function set useEditableLabel(value:Boolean):void
+		{
+			_useEditableLabel = value;
+			setLabelType(value);
+		}
+		
+		public function get useEditableLabel():Boolean
+		{
+			return _useEditableLabel;
+		}
+		
+		//---------------------------------------------------------------------
+		//
+		//	Methods
+		//
+		//---------------------------------------------------------------------
+		
+		/**
+		 * Use the value from the component and dispatch an event to the parent
+		 */
+		private function onLabelUpdated(event:Event):void
+		{
+			labelValue = String(editableLabel.data);
+			var updatedEvent:Event = new Event("valueUpdated");
+			dispatchEvent(updatedEvent);
+		}
+		
+		private function setLabelType(useEditableLabel:Boolean):void
+		{
+			if(useEditableLabel)
+			{
+				normalLabel.visible = false;
+				editableLabel.visible = true;
+				//editableLabel.mouseEnabled = true;
+			}
+			else
+			{
+				normalLabel.visible = true;
+				editableLabel.visible = false;
+				//editableLabel.mouseEnabled = false;
+			}
+		}
+			
+		]]>
+	</mx:Script>
+	<mx:Spacer width="1%" height="100%"/>
+	<mx:Canvas width="25%">
+		<mx:Label text="{labelName}" toolTip="{labelName}" width="100%" fontWeight="bold"/>
+	</mx:Canvas>
+	
+	<mx:Canvas id="valueContainer" width="73%">
+		<mx:Label id="normalLabel" text="{labelValue}" toolTip="{labelValue}" 
+			width="{valueContainer.width * 0.95}" truncateToFit="true"/>
+		<components:EditableLabel id="editableLabel" labelText="{labelValue}" 
+			toolTip="{labelValue}" width="{valueContainer.width * 0.95}"
+			visible="false" labelUpdated="onLabelUpdated(event)"/>
+	</mx:Canvas>
+	<mx:Spacer width="1%" height="100%"/>
+</mx:HBox>

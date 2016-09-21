@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml" 
+	width="100%" height="100%"
+	creationComplete="creationCompleteHandler()"
+	doubleClickEnabled="true" doubleClick="onDoubleClick()"
+	verticalScrollPolicy="off" horizontalScrollPolicy="off">
+	
+	<mx:Metadata>
+		[Exclude(name="blurFilter", kind="property")]
+		[Exclude(name="headerImage", kind="property")]
+	</mx:Metadata>
+	
+	<mx:Script>
+		<![CDATA[
+			import com.ae.managers.AssetManager;
+			
+			//-----------------------------------------------------------------
+			//
+			//	Variables
+			//
+			//-----------------------------------------------------------------
+			
+			[Bindable]
+			private var assets:AssetManager;
+			
+			//-----------------------------------------------------------------
+			//
+			//	Private Methods
+			//
+			//-----------------------------------------------------------------
+			
+			private function creationCompleteHandler():void
+			{
+				assets = AssetManager.getInstance();
+			}
+			
+			private function onDoubleClick():void
+			{
+				if(headerImage.filters.length > 0)
+					headerImage.filters = [];
+				else
+					headerImage.filters = [blurFilter]
+			}
+		]]>
+	</mx:Script>
+	
+	<mx:BlurFilter id="blurFilter"/>
+	
+	<mx:Image id="headerImage" source="{assets.CryptxHeader}" verticalCenter="0" horizontalCenter="0"/>
+</mx:Canvas>

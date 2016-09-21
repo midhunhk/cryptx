@@ -1,0 +1,419 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml" 
+	width="100%" height="100%" 
+	creationComplete="creationCompleteHandler()"
+	remove="destroy()" styleName="cryptxMainWindowStyle" 
+	xmlns:components="com.ae.cryptx.components.*">
+	
+	<mx:Metadata>
+		[Event(name="closeClicked", type="flash.events.Event")]
+	</mx:Metadata>
+	
+	<mx:Script>
+		<![CDATA[
+			import flash.net.navigateToURL;
+			
+			import com.ae.cryptx.utils.FileInfoUtils;
+			import com.ae.cryptx.core.CryptxModes;
+			
+			import mx.events.CloseEvent;
+			import mx.controls.Alert;
+			
+			import org.generalrelativity.thread.diagnostic.ProcessDiagnostic;
+			import org.generalrelativity.thread.event.GreenThreadEvent;
+			import org.generalrelativity.thread.GreenThread;
+			import org.generalrelativity.thread.IRunnable;
+			
+			import com.ae.cryptx.core.CryptxThread;
+			import com.ae.cryptx.events.CryptxEvent;
+			import com.ae.cryptx.vo.ParamatersVo;
+			import com.ae.cryptx.vo.FileInfoVo;
+			import com.ae.managers.AssetManager;
+			
+			//-----------------------------------------------------------------
+			//
+			//  Constants
+			//
+			//-----------------------------------------------------------------
+			
+			private const OK:String = "OK";
+			private const CANCEL:String = "Cancel";
+			
+			//-----------------------------------------------------------------
+			//
+			//  Variables
+			//
+			//-----------------------------------------------------------------
+			
+			[Bindable]
+			private var assets:AssetManager;
+			private var currentMode:String;
+			private var errorMessage:String;
+			private var greenThread:GreenThread;
+			private var isProcessSuccess:Boolean;
+			
+			//-----------------------------------------------------------------
+			//
+			//  Properties
+			//
+			//-----------------------------------------------------------------
+			
+			/**
+			 * sourceFileInfoVo
+			 */
+			private var _sourceFileInfoVo:FileInfoVo;
+			
+			[Bindable]
+			public function set sourceFileInfoVo(value:FileInfoVo):void
+			{
+				_sourceFileInfoVo = value;
+				if(value)
+				{
+					setCurrentMode(value.isRapFile);
+				}
+			}
+			
+			public function get sourceFileInfoVo():FileInfoVo
+			{
+				return _sourceFileInfoVo;
+			}
+			
+			/**
+			 * targetFileInfoVo
+			 */
+			public var _targetFileInfoVo:FileInfoVo;
+			
+			[Bindable]
+			public function set targetFileInfoVo(value:FileInfoVo):void
+			{
+				_targetFileInfoVo = value;
+			}
+			
+			public function get targetFileInfoVo():FileInfoVo
+			{
+				return _targetFileInfoVo;
+			}
+			
+			//-----------------------------------------------------------------
+			//
+			//  Methods
+			//
+			//-----------------------------------------------------------------
+			
+			/**
+			 * Creation complete handler
+			 */
+			private function creationCompleteHandler():void
+			{
+				assets = AssetManager.getInstance();
+			}
+			
+			private function destroy():void
+			{
+				
+			}
+			
+			/**
+			 * Resets the password fields
+			 */
+			public function reset():void
+			{
+				password2Text.text = "";
+				passwordText.text = "";
+			}
+			
+			/**
+			 * This method sets the current mode
+			 */
+			private function setCurrentMode(isRapFile:Boolean):void
+			{
+				if(isRapFile)
+				{
+					btnCryptx.label = currentMode = CryptxModes.DECRYPTION_MODE;
+				}
+				else
+				{
+					btnCryptx.label = currentMode = CryptxModes.ENCRYPTION_MODE;
+				}
+				openFolderBtn.visible = false;
+				openFolderBtn.includeInLayout = false;
+			}
+			
+			/**
+			 * Invoked when the close button is clicked
+			 */
+			private function onCloseClick():void
+			{
+				dispatchEvent( new Event("closeClicked") );				
+			}
+			
+			private function onCryptxButtonClick():void
+			{
+				// Valide the password
+				if(passwordText.text.length >= 4 && 
+					passwordText.text == password2Text.text)
+				{
+					var params:ParamatersVo = new ParamatersVo();
+					params.password = passwordText.text;
+					
+					// Use the target file info from the component if changed  
+					targetFileInfoVo = targetFileInfoComponent.fileInfo;
+					
+					// Show the overlay canvas
+					processOverlayCanvas.visible = true;
+					
+					// Create a thread
+					var process:IRunnable;
+					var thread:CryptxThread = 
+						new CryptxThread(currentMode, 
+							sourceFileInfoVo, targetFileInfoVo, params);
+					thread.addEventListener(CryptxEvent.PROGRESS, onThreadProgress);
+					thread.addEventListener(CryptxEvent.FAULT, onThreadFault);
+					process = thread;
+					
+					var processes:Array = new Array(process);
+					
+					//define frequency
+		 			var hertz:Number = stage.frameRate;
+		 			
+		 			//allow the thread to occupy whatever percentage of player's processing
+		 			var share:Number = 0.80;
+					
+					// create a green thread
+					greenThread = new GreenThread(processes, hertz, share, false);
+					
+					//listen for process and thread complete events
+		 			greenThread.addEventListener( Event.COMPLETE, threadCompleteHandler );
+		 
+		 			// reset progressbar
+		 			processProgress.setProgress(0, 1);
+		 			processProgress.label = "";
+		 			okCancelBtn.label = CANCEL;
+		 			completeMessageCanvas.visible = false;
+		 			completeMessageCanvas.includeInLayout = false;
+		 			progressMessageCanvas.visible = true;
+		 			progressMessageCanvas.includeInLayout = true;
+		 			isProcessSuccess = true;
+		 			
+		 			//open the thread
+		 			greenThread.open();
+				}
+				else
+				{
+					var message:String;
+					if(passwordText.text.length < 4)
+					{
+						message = "The password should atleast be 4 characters.";
+					}
+					else if(passwordText.text != password2Text.text)
+					{
+						message = "Both passwords should be the same.";
+					}
+					Alert.show(message, "Error");
+				}
+			}
+			
+			/**
+			 * This function is called when the thread has completed its execution
+			 */
+			private function threadCompleteHandler(event:Event):void
+			{
+				var message:String;
+				if(isProcessSuccess == true)
+				{
+					message = currentMode + "ion completed!";
+					// Fetch the system icon for the decrypted file type.
+					FileInfoUtils.updateFileInfoVo(targetFileInfoVo);
+					// Update the targetvo data to the view
+					targetFileInfoComponent.updateFileInfo(targetFileInfoVo);
+					// Show the open folder button 
+					openFolderBtn.visible = true;
+					openFolderBtn.includeInLayout = true;
+					fadeInEffect.play([progressButtonsCanvas]);
+				}
+				else
+				{
+					message = errorMessage;
+				}
+				okCancelBtn.label = OK;
+				completeMessage.text = message;
+				completeMessageCanvas.visible = true;
+	 			completeMessageCanvas.includeInLayout = true;
+	 			progressMessageCanvas.visible = false;
+	 			progressMessageCanvas.includeInLayout = false;
+			}
+			
+			/**
+			 * This method will update the progressbar based on the encryption
+			 * or decryption percentage.
+			 */
+			private function onThreadProgress(event:CryptxEvent):void
+			{
+				var progress:Number = event.progress;
+				processProgress.setProgress(progress, 1.0);
+				processProgress.label = 
+					currentMode + "ing (" + (progress * 100).toFixed(2) + " %)...";
+			}
+			
+			/**
+			 * This method will be called when the process throws an error
+			 */
+			private function onThreadFault(event:CryptxEvent):void
+			{
+				errorMessage = event.errorMessage;
+				isProcessSuccess = false;
+			}
+			
+			/**
+			 * This is the handler for click on the ok cancel button
+			 */
+			private function okCancelBtnClick(event:MouseEvent):void
+			{
+				var label:String = Button(event.target).label
+				if(label == OK)
+				{
+					// hide the overlay canvas
+					processOverlayCanvas.visible = false;
+				}
+				else
+				{
+					// ask for confirmation
+					Alert.show("Are you sure you want to cancel?", "Cancel", 
+						Alert.YES | Alert.NO, this, onCancelClick);
+				}
+			}
+			
+			/**
+			 * This is the handler for click on the openFolder button
+			 */
+			private function openFolderClick(event:MouseEvent):void
+			{
+				// Open the window using Windows Explorer
+				var urlRequest:URLRequest = 
+					new URLRequest(targetFileInfoVo.location);
+				navigateToURL(urlRequest);
+				
+				// hide the overlay canvas also
+				processOverlayCanvas.visible = false;
+			}
+			
+			/**
+			 * This function is invoked when the user clicks on the prompt
+			 * to cancel the operation.
+			 */
+			private function onCancelClick(event:CloseEvent):void
+			{
+				if(event.detail == Alert.YES)
+				{
+					// Try to cancel the current operation.
+					greenThread.removeEventListener(Event.COMPLETE, threadCompleteHandler);
+					greenThread.close(true);
+					
+					// hide the overlay canvas
+					processOverlayCanvas.visible = false;
+				}
+			}
+		]]>
+	</mx:Script>
+	
+	<!--filters-->
+	<mx:DropShadowFilter id="dropShadowFilter"/>
+	
+	<!--effects-->
+	<mx:Zoom id="zoomEffect"/>
+	<mx:Fade id="fadeInEffect" alphaFrom="0" alphaTo="1" duration="300"/>
+	<mx:Fade id="fadeOutEffect" alphaFrom="1" alphaTo="0"/>
+	
+	<!--layout-->
+	<mx:VBox width="99%" height="99%"
+		horizontalGap="0" verticalGap="2"
+		verticalAlign="middle">
+		
+		<mx:Canvas id="topCanvas" width="100%" height="26"
+			verticalScrollPolicy="off" horizontalScrollPolicy="off">
+			<mx:Label text="{sourceFileInfoVo.nameWithExtension}" verticalCenter="0"
+				left="5" bottom="4"
+				truncateToFit="true" width="{topCanvas.width * 0.9}"/>
+			<mx:Button label="X" right="5" useHandCursor="true"
+				height="20" width="30" verticalCenter="0" 
+				verticalGap="1" horizontalGap="1"
+				toolTip="Close"
+				buttonMode="true" click="onCloseClick()"/>
+		</mx:Canvas>
+		
+		<mx:Canvas width="100%">
+			<mx:HRule width="98%" verticalCenter="0" horizontalCenter="0"/>
+		</mx:Canvas>
+		
+		<components:FileInfoComponent id="sourceFileInfoComponent" 
+			fileInfo="{sourceFileInfoVo}"
+			width="99%" height="39%"/>
+			
+		<components:FileInfoComponent id="targetFileInfoComponent" 
+			fileInfo="{targetFileInfoVo}" isEditable="true"
+			width="99%" height="39%"/>
+		
+		<mx:VBox width="100%" height="10%" verticalGap="1" horizontalGap="1">
+			<mx:Form width="100%" height="100%">
+				<mx:FormItem label="Password">
+					<mx:TextInput id="passwordText" displayAsPassword="true"/> 
+				</mx:FormItem>
+				<mx:FormItem label="Re-Enter Password">
+					<mx:TextInput id="password2Text" displayAsPassword="true"/> 
+				</mx:FormItem>
+			</mx:Form>
+		</mx:VBox>
+		
+		<mx:Canvas width="100%" height="11%">
+			<mx:Button id="btnCryptx" label="Encrypt"
+				verticalCenter="0" horizontalCenter="0"
+				useHandCursor="true" buttonMode="true"
+				click="onCryptxButtonClick()"/>
+		</mx:Canvas>
+	</mx:VBox>
+	
+	<mx:Canvas id="processOverlayCanvas" width="100%" height="100%"
+		showEffect="{zoomEffect.play([innerCanvas])}"
+		hideEffect="{fadeOutEffect}"
+		styleName="processOverlayStyle" visible="false">
+		
+		<mx:VBox width="100%" height="30%" id="innerCanvas" 
+			verticalCenter="0" horizontalCenter="0"
+			verticalGap="2" horizontalGap="0"
+			filters="{[dropShadowFilter]}"
+			styleName="processOverlayMessageCanvas">
+			<mx:HBox id="progressMessageCanvas" width="100%" height="68%" 
+				verticalGap="0" horizontalGap="0"
+				verticalScrollPolicy="off" horizontalScrollPolicy="off">
+				<mx:Canvas width="15%" height="100%"
+					verticalScrollPolicy="off" horizontalScrollPolicy="off">
+					<mx:Image source="{assets.LoadingAnimation}" 
+						width="25" height="25"
+						verticalCenter="0" horizontalCenter="0"/>
+				</mx:Canvas>
+				<mx:Canvas width="85%" height="100%"
+					verticalScrollPolicy="off" horizontalScrollPolicy="off">
+					<mx:ProgressBar id="processProgress" mode="manual"
+						themeColor="#8327C2" labelPlacement="bottom" height="10"
+						verticalCenter="0" horizontalCenter="0" width="90%"/>
+				</mx:Canvas>
+			</mx:HBox>
+			<mx:Canvas id="completeMessageCanvas" width="100%" height="68%"
+				visible="false" includeInLayout="false">
+				<mx:Label id="completeMessage" verticalCenter="0" horizontalCenter="0"/>
+			</mx:Canvas>
+			<mx:HBox id="progressButtonsCanvas" width="100%" height="28%"
+				verticalAlign="middle" horizontalAlign="center">
+				<mx:Button id="okCancelBtn" label="Cancel" height="95%"
+					click="okCancelBtnClick(event)" width="60"
+					useHandCursor="true" buttonMode="true"/>
+				<mx:Button id="openFolderBtn" label="Open Folder" height="95%"
+					click="openFolderClick(event)" visible="false"
+					includeInLayout="false" width="110"
+					useHandCursor="true" buttonMode="true"/>
+			</mx:HBox>
+			<mx:Spacer width="100%" height="4%"/>
+		</mx:VBox>
+		
+	</mx:Canvas>	
+</mx:Canvas>

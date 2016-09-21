@@ -1,0 +1,93 @@
+/* CSS file */
+WindowedApplication
+{
+	background-color: #5B5B5B;
+	font-family: Calibri;
+	font-size: 12;
+}
+ToolTip
+{
+    backgroundAlpha: 0.8;
+    backgroundColor: #FB6E4C;
+    fontWeight: bold;
+	color: black;
+}
+
+/*---------------*/
+/* Canvas Styles */
+/*---------------*/
+.cryptxWindowStyle
+{
+	corner-radius: 4;
+	fill-colors: #f2f2f2, #f8f8f8;
+	angle: 90;
+}
+.processOverlayStyle
+{
+	background-color: #ffffff;
+	background-alpha: 0.75;
+}
+.processOverlayMessageCanvas
+{
+	corner-radius: 8;
+	background-alpha: 1;
+	background-color: #898989;
+	border-thickness: 1;
+	border-color: #121212;
+	border-style: solid;
+}
+.cryptxMainWindowStyle
+{
+	background-color: #ffffff;
+}
+.fileInfoComponentStyle
+{
+	angle: 90;
+	fill-colors: #f2f2f2, #8327C2;
+	corner-radius: 8;
+}
+.appInfoCanvasStyle
+{
+	background-color: #ffffff;
+	corner-radius: 8;
+	drop-shadow-enabled: true;
+}
+
+/*---------------*/
+/* Font Styles   */
+/*---------------*/
+.bodyHeadingFont
+{
+	font-size: 14;
+	font-weight: bold;
+}
+.bodyFont
+{
+	font-size: 12;
+	color: #111111;
+}
+.appInfoFont
+{
+	font-size: 12;
+	color: #111111;
+	padding-bottom: 5;
+	padding-left: 5;
+	padding-right: 5;
+	padding-top: 5;
+	background-alpha: 0;
+	border-style: none;
+}
+.dragDropFileFont
+{
+	background-alpha: 0;
+	padding-bottom: 3;
+	padding-left: 3;
+	padding-right: 3;
+	padding-top: 3;
+	font-size: 48;
+	border-style: none;
+}
+.boldFont
+{
+	font-weight: bold;
+}
