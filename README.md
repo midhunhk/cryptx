@@ -1,5 +1,8 @@
 Cryptx 6
 =============
+
+![GitHub Logo](/Resources/cryptx-6-header.png)
+
 Cryptx 6 is a file encryption/decryption app developed with Adobe Air.
 
 Features
