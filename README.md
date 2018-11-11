@@ -19,4 +19,4 @@ Features
 Latest Build
 ============
 The latest build for Cryptx 6 is available at: 
-http://www.mediafire.com/?png0da1boqw46of
+https://github.com/midhunhk/cryptx/blob/master/Builds/CryptX_6.0.8.1.air
